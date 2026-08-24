@@ -1,0 +1,6 @@
+{
+  "name": "DramaFlix",
+  "description": "Premium Asian drama streaming app for K-Dramas, C-Dramas, Anime, and Dubbed Series with Geometric Balance design.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
