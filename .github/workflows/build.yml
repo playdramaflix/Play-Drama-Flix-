@@ -19,11 +19,10 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Generate Missing Debug Keystore
+    - name: Create Dummy Secrets File
       run: |
-        keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-        mkdir -p app
-        cp debug.keystore app/debug.keystore
+        touch .env
+        touch .env.example
 
     - name: Setup Gradle Wrapper
       run: |
@@ -32,8 +31,8 @@ jobs:
         fi
         chmod +x ./gradlew
 
-    - name: Build APK with Gradle
-      run: ./gradlew assembleDebug --stacktrace --no-daemon
+    - name: Build APK without Configuration Cache
+      run: ./gradlew assembleDebug --no-configuration-cache --no-daemon --stacktrace
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
