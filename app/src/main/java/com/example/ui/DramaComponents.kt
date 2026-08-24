@@ -335,7 +335,7 @@ fun TopNavigationBar(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .clickable { onCategorySelected(if (tab == "Home") "All" else tab) }
+                        .clickable { onCategorySelected(tab) }
                         .padding(vertical = 2.dp)
                         .testTag("nav_tab_$tab")
                 ) {
@@ -353,7 +353,7 @@ fun TopNavigationBar(
                     if (isSelected) {
                         Box(
                             modifier = Modifier
-                                .width(16.dp)
+                                .width(18.dp)
                                 .height(2.5.dp)
                                 .clip(RoundedCornerShape(50))
                                 .background(Color.White)

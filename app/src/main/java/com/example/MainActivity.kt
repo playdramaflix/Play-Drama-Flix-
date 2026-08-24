@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -73,7 +75,7 @@ fun PlayDramaFlixApp(
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
-    var selectedTopCategory by remember { mutableStateOf("All") }
+    var selectedTopCategory by remember { mutableStateOf("Home") }
     var showNotificationsScreen by remember { mutableStateOf(false) }
 
     val allContents = when (val state = contentsState) {
@@ -82,13 +84,11 @@ fun PlayDramaFlixApp(
     }
 
     val spotlightDrama = allContents.firstOrNull { it.isFeatured } ?: allContents.firstOrNull()
-    val recentlyAdded = allContents.filter { it.isRecent || it.rawId == "1" || it.rawId == "2" || it.rawId == "3" || it.rawId == "4" || it.rawId == "8" || it.rawId == "10" }
-    val popularSeries = allContents
-        .filter { it.type == "series" || it.categories.any { c -> c.contains("Popular", ignoreCase = true) || c.contains("Series", ignoreCase = true) || c.contains("Drama", ignoreCase = true) } }
-        .sortedByDescending { it.numericViews }
-    val shortsDramas = allContents.filter { it.type == "shorts" || it.categories.any { c -> c.contains("Short", ignoreCase = true) } }
-    val dramaSeries = allContents.filter { it.type == "series" || it.categories.any { c -> c.contains("Drama", ignoreCase = true) } }
-    val movies = allContents.filter { it.type == "movie" || it.categories.any { c -> c.contains("Movie", ignoreCase = true) } }
+    val recentlyAdded = allContents.filter { it.isRecent }
+    val popularSeries = allContents.sortedByDescending { it.numericViews }
+    val shortsDramas = allContents.filter { it.type == "shorts" }
+    val dramaSeries = allContents.filter { it.type == "series" }
+    val movies = allContents.filter { it.type == "movie" }
     val animeSeries = allContents.filter { it.type == "anime" || it.categories.any { c -> c.contains("Anime", ignoreCase = true) } }
 
     // System Back Press Handler
@@ -96,6 +96,8 @@ fun PlayDramaFlixApp(
         BackHandler { showNotificationsScreen = false }
     } else if (activeContent != null) {
         BackHandler { viewModel.closePlayerOrDetail() }
+    } else if (currentTab == BottomNavTab.HOME && selectedTopCategory != "Home" && selectedTopCategory != "All") {
+        BackHandler { selectedTopCategory = "Home" }
     } else if (currentTab != BottomNavTab.HOME) {
         BackHandler { viewModel.selectTab(BottomNavTab.HOME) }
     }
@@ -166,231 +168,247 @@ fun PlayDramaFlixApp(
                 ) {
                     when (currentTab) {
                         BottomNavTab.HOME -> {
-                            LazyColumn(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .statusBarsPadding(),
-                                contentPadding = PaddingValues(bottom = 24.dp)
+                                    .statusBarsPadding()
                             ) {
-                                // 1. YOUKU-Style Top Header & Navigation Bar
-                                item {
-                                    TopNavigationBar(
-                                        categories = listOf("Home", "Popular", "Shorts Drama", "Drama Series", "Movies", "Anime Series", "Bangla Dub", "Hindi Dub"),
-                                        selectedCategory = selectedTopCategory,
-                                        notificationCount = notifications.size,
-                                        onCategorySelected = { cat ->
-                                            selectedTopCategory = cat
-                                            if (cat.contains("Shorts", ignoreCase = true)) {
-                                                viewModel.selectTab(BottomNavTab.SHORTS)
-                                            } else if (cat.equals("VIP", ignoreCase = true)) {
-                                                viewModel.selectTab(BottomNavTab.VIP)
-                                            }
-                                        },
-                                        onSearchClick = {
-                                            viewModel.selectTab(BottomNavTab.SEARCH)
-                                        },
-                                        onVipClick = {
-                                            viewModel.selectTab(BottomNavTab.VIP)
-                                        },
-                                        onNotificationClick = {
-                                            showNotificationsScreen = true
-                                        }
-                                    )
-                                }
-
-                                // 2. Hot Spotlight Hero Banner Card
-                                if (spotlightDrama != null) {
-                                    item {
-                                        Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)) {
-                                            HotSpotlightHeroCard(
-                                                drama = spotlightDrama,
-                                                onWatchClick = {
-                                                    viewModel.openContentDetail(spotlightDrama, playImmediately = true)
-                                                },
-                                                onDetailsClick = {
-                                                    viewModel.openContentDetail(spotlightDrama, playImmediately = false)
-                                                }
-                                            )
-                                        }
+                                // 1. YOUKU-Style Top Header & Navigation Bar (Pinned at top)
+                                TopNavigationBar(
+                                    categories = listOf("Home", "Popular", "Shorts Drama", "Drama Series", "Movies", "Anime Series", "Bangla Dub", "Hindi Dub"),
+                                    selectedCategory = selectedTopCategory,
+                                    notificationCount = notifications.size,
+                                    onCategorySelected = { cat ->
+                                        selectedTopCategory = cat
+                                    },
+                                    onSearchClick = {
+                                        viewModel.selectTab(BottomNavTab.SEARCH)
+                                    },
+                                    onVipClick = {
+                                        viewModel.selectTab(BottomNavTab.VIP)
+                                    },
+                                    onNotificationClick = {
+                                        showNotificationsScreen = true
                                     }
-                                }
+                                )
 
-                                // 3. Continue Watching Section (from local Room database!)
-                                if (continueWatchingList.isNotEmpty()) {
-                                    item {
-                                        Spacer(modifier = Modifier.height(14.dp))
-                                        SectionHeader(
-                                            title = "Continue Watching",
-                                            onSeeAllClick = { viewModel.selectTab(BottomNavTab.WATCHLIST) }
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-
-                                        // Horizontal Continue Watching Row with Progress Bar
-                                        androidx.compose.foundation.lazy.LazyRow(
-                                            contentPadding = PaddingValues(horizontal = 14.dp),
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                // 2. Smooth Animated Category Content Area
+                                AnimatedContent(
+                                    targetState = selectedTopCategory,
+                                    transitionSpec = {
+                                        (fadeIn(animationSpec = tween(200)) + slideInHorizontally(animationSpec = tween(200), initialOffsetX = { 30 }))
+                                            .togetherWith(fadeOut(animationSpec = tween(150)))
+                                    },
+                                    label = "category_screen_transition",
+                                    modifier = Modifier.fillMaxSize()
+                                ) { targetCategory ->
+                                    if (targetCategory.equals("Home", ignoreCase = true) || targetCategory.equals("All", ignoreCase = true)) {
+                                        LazyColumn(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentPadding = PaddingValues(bottom = 24.dp)
                                         ) {
-                                            items(continueWatchingList) { item ->
-                                                val contentItem = allContents.find { it.slug == item.contentSlug }
-                                                Column(
-                                                    modifier = Modifier
-                                                        .width(140.dp)
-                                                        .clickable {
-                                                            contentItem?.let { viewModel.openContentDetail(it, playImmediately = true) }
-                                                        }
-                                                ) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .height(84.dp)
-                                                            .clip(RoundedCornerShape(12.dp))
-                                                            .background(CardBackgroundDark)
-                                                    ) {
-                                                        AsyncImage(
-                                                            model = ImageRequest.Builder(context)
-                                                                .data(item.posterUrl)
-                                                                .crossfade(true)
-                                                                .error(R.drawable.img_derailment)
-                                                                .build(),
-                                                            contentDescription = item.contentTitle,
-                                                            modifier = Modifier.fillMaxSize(),
-                                                            contentScale = ContentScale.Crop
-                                                        )
-
-                                                        Icon(
-                                                            imageVector = Icons.Default.PlayCircle,
-                                                            contentDescription = "Resume",
-                                                            tint = Color.White,
-                                                            modifier = Modifier
-                                                                .size(28.dp)
-                                                                .align(Alignment.Center)
-                                                        )
-
-                                                        // Progress line
-                                                        LinearProgressIndicator(
-                                                            progress = { item.progressPercentage.coerceIn(0f, 1f) },
-                                                            modifier = Modifier
-                                                                .fillMaxWidth()
-                                                                .height(3.dp)
-                                                                .align(Alignment.BottomCenter),
-                                                            color = TealAccent,
-                                                            trackColor = Color.Black.copy(alpha = 0.5f)
+                                            // Hot Spotlight Hero Banner Card
+                                            if (spotlightDrama != null) {
+                                                item {
+                                                    Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)) {
+                                                        HotSpotlightHeroCard(
+                                                            drama = spotlightDrama,
+                                                            onWatchClick = {
+                                                                viewModel.openContentDetail(spotlightDrama, playImmediately = true)
+                                                            },
+                                                            onDetailsClick = {
+                                                                viewModel.openContentDetail(spotlightDrama, playImmediately = false)
+                                                            }
                                                         )
                                                     }
+                                                }
+                                            }
 
-                                                    Spacer(modifier = Modifier.height(4.dp))
-
-                                                    Text(
-                                                        text = item.contentTitle,
-                                                        color = Color.White,
-                                                        fontSize = 11.sp,
-                                                        fontWeight = FontWeight.SemiBold,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
+                                            // Continue Watching Section (from local Room database!)
+                                            if (continueWatchingList.isNotEmpty()) {
+                                                item {
+                                                    Spacer(modifier = Modifier.height(14.dp))
+                                                    SectionHeader(
+                                                        title = "Continue Watching",
+                                                        onSeeAllClick = { viewModel.selectTab(BottomNavTab.WATCHLIST) }
                                                     )
-                                                    Text(
-                                                        text = "EP ${item.episodeNumber}",
-                                                        color = TealAccent,
-                                                        fontSize = 10.sp
+                                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                                    androidx.compose.foundation.lazy.LazyRow(
+                                                        contentPadding = PaddingValues(horizontal = 14.dp),
+                                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                    ) {
+                                                        items(continueWatchingList) { item ->
+                                                            val contentItem = allContents.find { it.slug == item.contentSlug }
+                                                            Column(
+                                                                modifier = Modifier
+                                                                    .width(140.dp)
+                                                                    .clickable {
+                                                                        contentItem?.let { viewModel.openContentDetail(it, playImmediately = true) }
+                                                                    }
+                                                            ) {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .fillMaxWidth()
+                                                                        .height(84.dp)
+                                                                        .clip(RoundedCornerShape(12.dp))
+                                                                        .background(CardBackgroundDark)
+                                                                ) {
+                                                                    AsyncImage(
+                                                                        model = ImageRequest.Builder(context)
+                                                                            .data(item.posterUrl)
+                                                                            .crossfade(true)
+                                                                            .error(R.drawable.img_derailment)
+                                                                            .build(),
+                                                                        contentDescription = item.contentTitle,
+                                                                        modifier = Modifier.fillMaxSize(),
+                                                                        contentScale = ContentScale.Crop
+                                                                    )
+
+                                                                    Icon(
+                                                                        imageVector = Icons.Default.PlayCircle,
+                                                                        contentDescription = "Resume",
+                                                                        tint = Color.White,
+                                                                        modifier = Modifier
+                                                                            .size(28.dp)
+                                                                            .align(Alignment.Center)
+                                                                    )
+
+                                                                    LinearProgressIndicator(
+                                                                        progress = { item.progressPercentage.coerceIn(0f, 1f) },
+                                                                        modifier = Modifier
+                                                                            .fillMaxWidth()
+                                                                            .height(3.dp)
+                                                                            .align(Alignment.BottomCenter),
+                                                                        color = TealAccent,
+                                                                        trackColor = Color.Black.copy(alpha = 0.5f)
+                                                                    )
+                                                                }
+
+                                                                Spacer(modifier = Modifier.height(4.dp))
+
+                                                                Text(
+                                                                    text = item.contentTitle,
+                                                                    color = Color.White,
+                                                                    fontSize = 11.sp,
+                                                                    fontWeight = FontWeight.SemiBold,
+                                                                    maxLines = 1,
+                                                                    overflow = TextOverflow.Ellipsis
+                                                                )
+                                                                Text(
+                                                                    text = "EP ${item.episodeNumber}",
+                                                                    color = TealAccent,
+                                                                    fontSize = 10.sp
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            // 1. Recently Added
+                                            if (recentlyAdded.isNotEmpty()) {
+                                                item {
+                                                    Spacer(modifier = Modifier.height(14.dp))
+                                                    SectionHeader(
+                                                        title = "Recently Added",
+                                                        onSeeAllClick = { selectedTopCategory = "Popular" }
+                                                    )
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                    HorizontalDramaRow(
+                                                        dramas = recentlyAdded,
+                                                        onDramaClick = { drama -> viewModel.openContentDetail(drama) }
+                                                    )
+                                                }
+                                            }
+
+                                            // 2. Popular Series
+                                            if (popularSeries.isNotEmpty()) {
+                                                item {
+                                                    Spacer(modifier = Modifier.height(16.dp))
+                                                    SectionHeader(
+                                                        title = "Popular Series",
+                                                        onSeeAllClick = { selectedTopCategory = "Popular" }
+                                                    )
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                    HorizontalDramaRow(
+                                                        dramas = popularSeries,
+                                                        onDramaClick = { drama -> viewModel.openContentDetail(drama) }
+                                                    )
+                                                }
+                                            }
+
+                                            // 3. Shorts Drama
+                                            if (shortsDramas.isNotEmpty()) {
+                                                item {
+                                                    Spacer(modifier = Modifier.height(16.dp))
+                                                    SectionHeader(
+                                                        title = "Shorts Drama",
+                                                        onSeeAllClick = { selectedTopCategory = "Shorts Drama" }
+                                                    )
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                    HorizontalDramaRow(
+                                                        dramas = shortsDramas,
+                                                        onDramaClick = { drama -> viewModel.openContentDetail(drama, playImmediately = true) }
+                                                    )
+                                                }
+                                            }
+
+                                            // 4. Drama Series
+                                            if (dramaSeries.isNotEmpty()) {
+                                                item {
+                                                    Spacer(modifier = Modifier.height(16.dp))
+                                                    SectionHeader(
+                                                        title = "Drama Series",
+                                                        onSeeAllClick = { selectedTopCategory = "Drama Series" }
+                                                    )
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                    HorizontalDramaRow(
+                                                        dramas = dramaSeries,
+                                                        onDramaClick = { drama -> viewModel.openContentDetail(drama) }
+                                                    )
+                                                }
+                                            }
+
+                                            // 5. Movies
+                                            if (movies.isNotEmpty()) {
+                                                item {
+                                                    Spacer(modifier = Modifier.height(16.dp))
+                                                    SectionHeader(
+                                                        title = "Movies",
+                                                        onSeeAllClick = { selectedTopCategory = "Movies" }
+                                                    )
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                    HorizontalDramaRow(
+                                                        dramas = movies,
+                                                        onDramaClick = { drama -> viewModel.openContentDetail(drama) }
+                                                    )
+                                                }
+                                            }
+
+                                            // 6. Anime Series
+                                            if (animeSeries.isNotEmpty()) {
+                                                item {
+                                                    Spacer(modifier = Modifier.height(16.dp))
+                                                    SectionHeader(
+                                                        title = "Anime Series",
+                                                        onSeeAllClick = { selectedTopCategory = "Anime Series" }
+                                                    )
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                    HorizontalDramaRow(
+                                                        dramas = animeSeries,
+                                                        onDramaClick = { drama -> viewModel.openContentDetail(drama) }
                                                     )
                                                 }
                                             }
                                         }
-                                    }
-                                }
-
-                                // 1. Recently Added
-                                if (recentlyAdded.isNotEmpty()) {
-                                    item {
-                                        Spacer(modifier = Modifier.height(14.dp))
-                                        SectionHeader(
-                                            title = "Recently Added",
-                                            onSeeAllClick = { viewModel.selectTab(BottomNavTab.SEARCH) }
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        HorizontalDramaRow(
-                                            dramas = recentlyAdded,
-                                            onDramaClick = { drama -> viewModel.openContentDetail(drama) }
-                                        )
-                                    }
-                                }
-
-                                // 2. Popular Series
-                                if (popularSeries.isNotEmpty()) {
-                                    item {
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        SectionHeader(
-                                            title = "Popular Series",
-                                            onSeeAllClick = { viewModel.selectTab(BottomNavTab.SEARCH) }
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        HorizontalDramaRow(
-                                            dramas = popularSeries,
-                                            onDramaClick = { drama -> viewModel.openContentDetail(drama) }
-                                        )
-                                    }
-                                }
-
-                                // 3. Shorts Drama
-                                if (shortsDramas.isNotEmpty()) {
-                                    item {
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        SectionHeader(
-                                            title = "Shorts Drama",
-                                            onSeeAllClick = { viewModel.selectTab(BottomNavTab.SHORTS) }
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        HorizontalDramaRow(
-                                            dramas = shortsDramas,
-                                            onDramaClick = { drama -> viewModel.openContentDetail(drama, playImmediately = true) }
-                                        )
-                                    }
-                                }
-
-                                // 4. Drama Series
-                                if (dramaSeries.isNotEmpty()) {
-                                    item {
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        SectionHeader(
-                                            title = "Drama Series",
-                                            onSeeAllClick = { viewModel.selectTab(BottomNavTab.SEARCH) }
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        HorizontalDramaRow(
-                                            dramas = dramaSeries,
-                                            onDramaClick = { drama -> viewModel.openContentDetail(drama) }
-                                        )
-                                    }
-                                }
-
-                                // 5. Movies
-                                if (movies.isNotEmpty()) {
-                                    item {
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        SectionHeader(
-                                            title = "Movies",
-                                            onSeeAllClick = { viewModel.selectTab(BottomNavTab.SEARCH) }
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        HorizontalDramaRow(
-                                            dramas = movies,
-                                            onDramaClick = { drama -> viewModel.openContentDetail(drama) }
-                                        )
-                                    }
-                                }
-
-                                // 6. Anime Series
-                                if (animeSeries.isNotEmpty()) {
-                                    item {
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        SectionHeader(
-                                            title = "Anime Series",
-                                            onSeeAllClick = { viewModel.selectTab(BottomNavTab.SEARCH) }
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        HorizontalDramaRow(
-                                            dramas = animeSeries,
-                                            onDramaClick = { drama -> viewModel.openContentDetail(drama) }
+                                    } else {
+                                        // Dedicated Category Page Screen!
+                                        CategoryPageScreen(
+                                            categoryName = targetCategory,
+                                            allContents = allContents,
+                                            onContentClick = { drama -> viewModel.openContentDetail(drama) },
+                                            onPlayClick = { drama -> viewModel.openContentDetail(drama, playImmediately = true) }
                                         )
                                     }
                                 }

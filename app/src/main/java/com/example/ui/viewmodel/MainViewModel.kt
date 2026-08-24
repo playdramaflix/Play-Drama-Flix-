@@ -121,9 +121,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun openContentDetail(content: ContentItemDto, playImmediately: Boolean = false) {
         _activeContent.value = content
+        _selectedEpisode.value = null
+        _selectedServer.value = null
+        _watchDetailState.value = UiState.Loading
         viewModelScope.launch {
-            _watchDetailState.value = UiState.Loading
-            repository.getWatchDetails(content.slug).fold(
+            repository.getWatchDetails(content.slug, content).fold(
                 onSuccess = { details ->
                     _watchDetailState.value = UiState.Success(details)
                     val firstEp = details.episodes.firstOrNull()
