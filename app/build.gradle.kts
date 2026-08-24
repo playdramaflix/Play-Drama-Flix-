@@ -11,7 +11,7 @@ plugins {
 }
 
 android {
-  namespace = "com.aistudio.dramaflix"
+  namespace = "com.example"
   compileSdk = 35
 
   defaultConfig {
@@ -38,6 +38,10 @@ android {
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+  }
+
+  kotlinOptions {
+    jvmTarget = "17"
   }
 
   buildFeatures {
@@ -87,8 +91,6 @@ dependencies {
   implementation(libs.androidx.media3.common)
   implementation(libs.androidx.media3.exoplayer.hls)
   implementation(libs.converter.moshi)
-  implementation(libs.firebase.ai)
-  implementation(libs.firebase.appcheck.recaptcha)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.logging.interceptor)
