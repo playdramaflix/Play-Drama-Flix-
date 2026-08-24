@@ -1,5 +1,6 @@
 package com.example.ui.player
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -64,6 +65,14 @@ fun ShortsReelsPlayer(
     var isLiked by remember { mutableStateOf(false) }
 
     val currentEpisode = episodes[pagerState.currentPage]
+
+    BackHandler {
+        if (showEpisodeDrawer) {
+            showEpisodeDrawer = false
+        } else {
+            onClose()
+        }
+    }
 
     Box(
         modifier = modifier

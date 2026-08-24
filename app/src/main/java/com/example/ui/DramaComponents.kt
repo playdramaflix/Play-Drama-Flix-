@@ -38,137 +38,329 @@ import com.example.ui.theme.*
 import com.example.ui.viewmodel.BottomNavTab
 
 @Composable
+fun VipCrownBadge(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+    Box(
+        modifier = modifier
+            .size(width = 38.dp, height = 30.dp)
+            .clickable { onClick() }
+            .testTag("top_vip_icon_button"),
+        contentAlignment = Alignment.Center
+    ) {
+        // High-fidelity Custom Vector Crown with 3 Jeweled points and Golden gradient
+        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+
+            // Center jewel, left jewel, right jewel coordinates
+            val leftJewelX = w * 0.17f
+            val leftJewelY = h * 0.40f
+            val leftJewelRadius = w * 0.14f
+
+            val centerJewelX = w * 0.50f
+            val centerJewelY = h * 0.22f
+            val centerJewelRadius = w * 0.16f
+
+            val rightJewelX = w * 0.83f
+            val rightJewelY = h * 0.40f
+            val rightJewelRadius = w * 0.14f
+
+            // Crown Base Path
+            val crownPath = androidx.compose.ui.graphics.Path().apply {
+                // Bottom left rounded corner start
+                moveTo(w * 0.22f, h * 0.90f)
+                // Bottom horizontal line with subtle curve
+                quadraticTo(w * 0.50f, h * 0.94f, w * 0.78f, h * 0.90f)
+                // Bottom right corner up to right jewel
+                quadraticTo(w * 0.84f, h * 0.85f, rightJewelX, rightJewelY)
+                // Right valley dipping in towards center
+                quadraticTo(w * 0.68f, h * 0.54f, centerJewelX, centerJewelY)
+                // Left valley dipping in towards left
+                quadraticTo(w * 0.32f, h * 0.54f, leftJewelX, leftJewelY)
+                // Left wall down to bottom left
+                quadraticTo(w * 0.16f, h * 0.85f, w * 0.22f, h * 0.90f)
+                close()
+            }
+
+            // Outer Golden Glow Border
+            drawPath(
+                path = crownPath,
+                color = Color(0xFFFFEB3B),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.5.dp.toPx())
+            )
+
+            // Crown Body Gradient Fill (Bright Golden Yellow -> Rich Warm Orange)
+            drawPath(
+                path = crownPath,
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFFFD54F),
+                        Color(0xFFFFB300),
+                        Color(0xFFFF8F00)
+                    )
+                )
+            )
+
+            // Inner Highlight line for 3D look
+            val innerPath = androidx.compose.ui.graphics.Path().apply {
+                moveTo(w * 0.24f, h * 0.52f)
+                quadraticTo(w * 0.50f, h * 0.36f, w * 0.76f, h * 0.52f)
+            }
+            drawPath(
+                path = innerPath,
+                color = Color(0x66FFFFFF),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.2.dp.toPx())
+            )
+
+            // Helper to draw jeweled peaks (Outer yellow rim + Inner vibrant red gem)
+            fun drawJewel(cx: Float, cy: Float, radius: Float) {
+                // Outer Yellow Ring
+                drawCircle(
+                    color = Color(0xFFFFEB3B),
+                    radius = radius,
+                    center = androidx.compose.ui.geometry.Offset(cx, cy)
+                )
+                // Inner Coral-Red Gem
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0xFFFF5252), Color(0xFFE53935)),
+                        center = androidx.compose.ui.geometry.Offset(cx - radius * 0.2f, cy - radius * 0.2f),
+                        radius = radius * 0.75f
+                    ),
+                    radius = radius * 0.72f,
+                    center = androidx.compose.ui.geometry.Offset(cx, cy)
+                )
+                // Gem glint shine
+                drawCircle(
+                    color = Color(0x99FFFFFF),
+                    radius = radius * 0.22f,
+                    center = androidx.compose.ui.geometry.Offset(cx - radius * 0.28f, cy - radius * 0.28f)
+                )
+            }
+
+            // Draw Left, Center, Right Jewels
+            drawJewel(leftJewelX, leftJewelY, leftJewelRadius)
+            drawJewel(centerJewelX, centerJewelY, centerJewelRadius)
+            drawJewel(rightJewelX, rightJewelY, rightJewelRadius)
+        }
+
+        // Bold Italic "VIP" Text centered on crown body
+        Text(
+            text = "VIP",
+            color = Color.White,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Black,
+            style = androidx.compose.ui.text.TextStyle(
+                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                shadow = androidx.compose.ui.graphics.Shadow(
+                    color = Color(0x88000000),
+                    offset = androidx.compose.ui.geometry.Offset(1.5f, 1.5f),
+                    blurRadius = 2f
+                )
+            ),
+            letterSpacing = 0.5.sp,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(y = (-3.5).dp)
+        )
+    }
+}
+
+@Composable
 fun TopNavigationBar(
     categories: List<String>,
     selectedCategory: String,
     notificationCount: Int = 3,
     onCategorySelected: (String) -> Unit,
     onNotificationClick: () -> Unit,
+    onSearchClick: () -> Unit = {},
+    onVipClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 10.dp, bottom = 10.dp, start = 12.dp, end = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFA0D0F14),
+                        Color(0xD90D0F14),
+                        Color(0x000D0F14)
+                    )
+                )
+            )
+            .padding(top = 0.dp, bottom = 2.dp)
     ) {
-        // Horizontal Scrollable Category Pills
+        // TOP ROW: Compact Name (PDFlix) + Search Pill + Custom VIP Crown + Notification Icon
         Row(
             modifier = Modifier
-                .weight(1f)
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            categories.forEach { category ->
-                val isSelected = category == selectedCategory
+            // Compact Brand Title: PDFlix
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clickable { onCategorySelected("Home") }
+                    .testTag("app_brand_logo")
+                    .padding(end = 4.dp)
+            ) {
+                Text(
+                    text = "PD",
+                    color = Color(0xFF00D2FF),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.5).sp
+                )
+                Text(
+                    text = "Flix",
+                    color = Color(0xFFFF9900),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.5).sp
+                )
+            }
 
-                when (category) {
-                    "VIP" -> {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(Color(0xFF1E1A14))
-                                .border(1.2.dp, GoldVip, RoundedCornerShape(50))
-                                .clickable { onCategorySelected("VIP") }
-                                .padding(horizontal = 14.dp, vertical = 7.dp)
-                                .testTag("top_vip_pill"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(text = "👑", fontSize = 12.sp)
-                                Text(
-                                    text = "VIP",
-                                    color = GoldVip,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
+            Spacer(modifier = Modifier.width(6.dp))
 
-                    "All" -> {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(if (isSelected) TealAccent else SurfaceVariantDark.copy(alpha = 0.7f))
-                                .border(1.dp, if (isSelected) TealAccent else BorderDark, RoundedCornerShape(50))
-                                .clickable { onCategorySelected("All") }
-                                .padding(horizontal = 16.dp, vertical = 7.dp)
-                                .testTag("top_all_pill"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "All",
-                                color = if (isSelected) BackgroundDark else TextPrimary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+            // Rounded Search Pill Bar
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(32.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0x2EFFFFFF))
+                    .border(0.8.dp, Color(0x1FFFFFFF), RoundedCornerShape(50))
+                    .clickable { onSearchClick() }
+                    .padding(horizontal = 12.dp)
+                    .testTag("top_search_bar_pill"),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Search show...",
+                        color = Color(0xFFADB2BE),
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
 
-                    else -> {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(if (isSelected) TealAccent else SurfaceVariantDark.copy(alpha = 0.7f))
-                                .border(1.dp, if (isSelected) TealAccent else BorderDark, RoundedCornerShape(50))
-                                .clickable { onCategorySelected(category) }
-                                .padding(horizontal = 14.dp, vertical = 7.dp)
-                                .testTag("top_category_pill_$category"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = category,
-                                color = if (isSelected) BackgroundDark else TextPrimary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = Color(0xFFCCD0DB),
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(7.dp))
+
+            // Exact Custom 3D VIP Crown Button
+            VipCrownBadge(
+                onClick = onVipClick
+            )
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Notification Bell Icon with Badge Counter (Compact)
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(Color(0x2EFFFFFF))
+                    .border(0.8.dp, Color(0x1FFFFFFF), CircleShape)
+                    .clickable { onNotificationClick() }
+                    .testTag("top_notification_button"),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Notifications,
+                    contentDescription = "Notifications",
+                    tint = Color.White,
+                    modifier = Modifier.size(15.dp)
+                )
+
+                if (notificationCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 1.dp, y = (-1).dp)
+                            .size(11.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFF2A4B)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (notificationCount > 9) "9+" else notificationCount.toString(),
+                            color = Color.White,
+                            fontSize = 7.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Notification Bell Icon with Badge
-        Box(
+        // SECOND ROW: Horizontal Category Tabs (Home, Shorts, Drama, Anime, Movie, Variety, Kids, Doc)
+        Row(
             modifier = Modifier
-                .size(38.dp)
-                .clip(CircleShape)
-                .background(SurfaceVariantDark.copy(alpha = 0.7f))
-                .border(1.dp, BorderDark, CircleShape)
-                .clickable { onNotificationClick() }
-                .testTag("notification_button"),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Notifications,
-                contentDescription = "Notifications",
-                tint = TextPrimary,
-                modifier = Modifier.size(18.dp)
-            )
+            val tabList = if (categories.contains("Home") || categories.contains("All")) {
+                categories.map { if (it == "All") "Home" else it }
+            } else {
+                listOf("Home", "Shorts", "Drama", "Anime", "Movie", "Variety", "Kids", "Doc")
+            }
 
-            if (notificationCount > 0) {
-                Box(
+            tabList.forEach { tab ->
+                val isSelected = (tab == "Home" && (selectedCategory == "Home" || selectedCategory == "All")) ||
+                                 tab.equals(selectedCategory, ignoreCase = true)
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = 2.dp, y = (-2).dp)
-                        .size(16.dp)
-                        .clip(CircleShape)
-                        .background(NotificationBadgeRed),
-                    contentAlignment = Alignment.Center
+                        .clickable { onCategorySelected(if (tab == "Home") "All" else tab) }
+                        .padding(vertical = 2.dp)
+                        .testTag("nav_tab_$tab")
                 ) {
                     Text(
-                        text = notificationCount.toString(),
-                        color = Color.White,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
+                        text = tab,
+                        color = if (isSelected) Color.White else Color(0x99FFFFFF),
+                        fontSize = if (isSelected) 17.sp else 14.5.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        letterSpacing = if (isSelected) 0.sp else 0.2.sp
                     )
+
+                    Spacer(modifier = Modifier.height(2.5.dp))
+
+                    // Sleek Active Indicator Underline
+                    if (isSelected) {
+                        Box(
+                            modifier = Modifier
+                                .width(16.dp)
+                                .height(2.5.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(Color.White)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(2.5.dp))
+                    }
                 }
             }
         }
@@ -563,35 +755,40 @@ fun DramaPosterCardHorizontal(
                 )
             }
 
-            // Cyan RECENTLY ADDED Pill (if applicable)
-            if (drama.isRecent) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 28.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color(0xFF00A2FF))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+            // Bottom Bar: Episodes Count (Left) & Real Views Count (Right)
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 7.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${drama.totalEpisodes} Ep",
+                    color = Color(0xFFE2E4EB),
+                    fontSize = 9.5.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.Visibility,
+                        contentDescription = "Views",
+                        tint = Color(0xFFFFC107),
+                        modifier = Modifier.size(11.dp)
+                    )
                     Text(
-                        text = "RECENTLY ADDED",
-                        color = Color.White,
-                        fontSize = 7.5.sp,
-                        fontWeight = FontWeight.Black
+                        text = drama.viewsDisplay,
+                        color = Color(0xFFFFD54F),
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
-
-            // Bottom Left Episodes Count
-            Text(
-                text = "${drama.totalEpisodes} Episodes",
-                color = Color.White,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(8.dp)
-            )
         }
 
         Spacer(modifier = Modifier.height(6.dp))

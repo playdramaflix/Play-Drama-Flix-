@@ -51,6 +51,34 @@ data class ContentItemDto(
             else -> "0 views"
         }
 
+    val numericViews: Long
+        get() {
+            return when (val v = rawViews) {
+                is Number -> v.toLong()
+                is String -> {
+                    val clean = v.trim().uppercase().replace("VIEWS", "").replace("VIEW", "").trim()
+                    when {
+                        clean.endsWith("M") -> ((clean.dropLast(1).toDoubleOrNull() ?: 1.0) * 1_000_000).toLong()
+                        clean.endsWith("K") -> ((clean.dropLast(1).toDoubleOrNull() ?: 1.0) * 1_000).toLong()
+                        else -> clean.toLongOrNull() ?: 0L
+                    }
+                }
+                else -> 0L
+            }
+        }
+
+    val viewsDisplay: String
+        get() {
+            val n = numericViews
+            return when {
+                n >= 1_000_000 -> "${(n / 100_000) / 10.0}M"
+                n >= 1_000 -> "${(n / 100) / 10.0}K"
+                n > 0 -> "$n"
+                rawViews is String && (rawViews as String).isNotBlank() -> rawViews as String
+                else -> "100K"
+            }
+        }
+
     val categories: List<String>
         get() = when (rawCategories) {
             is List<*> -> rawCategories.filterIsInstance<String>()

@@ -1,5 +1,6 @@
 package com.example.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -65,6 +66,11 @@ fun DramaDetailPlayerScreen(
     val servers = watchDetails?.servers ?: emptyList()
     val currentEpisode = selectedEpisode ?: episodes.firstOrNull() ?: EpisodeDto("ep_1", 1, "Episode 1")
 
+    // Handle system back navigation explicitly
+    BackHandler {
+        onBackClick()
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -82,12 +88,15 @@ fun DramaDetailPlayerScreen(
         ) {
             IconButton(
                 onClick = onBackClick,
-                modifier = Modifier.size(38.dp)
+                modifier = Modifier
+                    .size(44.dp)
+                    .testTag("detail_back_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Back",
-                    tint = TextPrimary
+                    tint = TextPrimary,
+                    modifier = Modifier.size(24.dp)
                 )
             }
 

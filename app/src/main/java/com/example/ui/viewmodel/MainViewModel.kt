@@ -167,6 +167,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _activeContent.value = null
         _selectedEpisode.value = null
         _playerDisplayMode.value = PlayerDisplayMode.STANDALONE_PAGE
+        if (_currentTab.value == BottomNavTab.SHORTS) {
+            _currentTab.value = BottomNavTab.HOME
+        }
     }
 
     fun toggleWatchlistCurrentItem() {

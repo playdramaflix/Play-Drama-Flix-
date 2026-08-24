@@ -30,7 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.data.model.ContentItemDto
+import com.example.data.model.*
 import com.example.ui.*
 import com.example.ui.player.ShortsReelsPlayer
 import com.example.ui.theme.BackgroundDark
@@ -82,19 +82,26 @@ fun PlayDramaFlixApp(
     }
 
     val spotlightDrama = allContents.firstOrNull { it.isFeatured } ?: allContents.firstOrNull()
-    val recentlyAdded = allContents.filter { it.isRecent }
-    val popularSeries = allContents.filter { it.type == "series" }
-    val shortsDramas = allContents.filter { it.type == "shorts" }
-    val animeSeries = allContents.filter { it.type == "anime" }
+    val recentlyAdded = allContents.filter { it.isRecent || it.rawId == "1" || it.rawId == "2" || it.rawId == "3" || it.rawId == "4" || it.rawId == "8" || it.rawId == "10" }
+    val popularSeries = allContents
+        .filter { it.type == "series" || it.categories.any { c -> c.contains("Popular", ignoreCase = true) || c.contains("Series", ignoreCase = true) || c.contains("Drama", ignoreCase = true) } }
+        .sortedByDescending { it.numericViews }
+    val shortsDramas = allContents.filter { it.type == "shorts" || it.categories.any { c -> c.contains("Short", ignoreCase = true) } }
+    val dramaSeries = allContents.filter { it.type == "series" || it.categories.any { c -> c.contains("Drama", ignoreCase = true) } }
+    val movies = allContents.filter { it.type == "movie" || it.categories.any { c -> c.contains("Movie", ignoreCase = true) } }
+    val animeSeries = allContents.filter { it.type == "anime" || it.categories.any { c -> c.contains("Anime", ignoreCase = true) } }
 
     // System Back Press Handler
     if (showNotificationsScreen) {
         BackHandler { showNotificationsScreen = false }
     } else if (activeContent != null) {
         BackHandler { viewModel.closePlayerOrDetail() }
+    } else if (currentTab != BottomNavTab.HOME) {
+        BackHandler { viewModel.selectTab(BottomNavTab.HOME) }
     }
 
     Scaffold(
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (activeContent == null && !showNotificationsScreen) {
                 PlayDramaFlixBottomNav(
@@ -154,7 +161,7 @@ fun PlayDramaFlixApp(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
+                        .padding(bottom = innerPadding.calculateBottomPadding())
                         .background(BackgroundDark)
                 ) {
                     when (currentTab) {
@@ -165,19 +172,25 @@ fun PlayDramaFlixApp(
                                     .statusBarsPadding(),
                                 contentPadding = PaddingValues(bottom = 24.dp)
                             ) {
-                                // 1. Top Category Pill Navigation Bar
+                                // 1. YOUKU-Style Top Header & Navigation Bar
                                 item {
                                     TopNavigationBar(
-                                        categories = listOf("All", "Drama Series", "Shorts Drama", "Anime", "VIP"),
+                                        categories = listOf("Home", "Popular", "Shorts Drama", "Drama Series", "Movies", "Anime Series", "Bangla Dub", "Hindi Dub"),
                                         selectedCategory = selectedTopCategory,
                                         notificationCount = notifications.size,
                                         onCategorySelected = { cat ->
                                             selectedTopCategory = cat
-                                            if (cat == "VIP") {
-                                                viewModel.selectTab(BottomNavTab.VIP)
-                                            } else if (cat == "Shorts Drama") {
+                                            if (cat.contains("Shorts", ignoreCase = true)) {
                                                 viewModel.selectTab(BottomNavTab.SHORTS)
+                                            } else if (cat.equals("VIP", ignoreCase = true)) {
+                                                viewModel.selectTab(BottomNavTab.VIP)
                                             }
+                                        },
+                                        onSearchClick = {
+                                            viewModel.selectTab(BottomNavTab.SEARCH)
+                                        },
+                                        onVipClick = {
+                                            viewModel.selectTab(BottomNavTab.VIP)
                                         },
                                         onNotificationClick = {
                                             showNotificationsScreen = true
@@ -286,7 +299,7 @@ fun PlayDramaFlixApp(
                                     }
                                 }
 
-                                // 4. Recently Added
+                                // 1. Recently Added
                                 if (recentlyAdded.isNotEmpty()) {
                                     item {
                                         Spacer(modifier = Modifier.height(14.dp))
@@ -302,7 +315,7 @@ fun PlayDramaFlixApp(
                                     }
                                 }
 
-                                // 5. Popular Series
+                                // 2. Popular Series
                                 if (popularSeries.isNotEmpty()) {
                                     item {
                                         Spacer(modifier = Modifier.height(16.dp))
@@ -318,12 +331,12 @@ fun PlayDramaFlixApp(
                                     }
                                 }
 
-                                // 6. Shorts Drama
+                                // 3. Shorts Drama
                                 if (shortsDramas.isNotEmpty()) {
                                     item {
                                         Spacer(modifier = Modifier.height(16.dp))
                                         SectionHeader(
-                                            title = "Shorts Drama (Bangla Dub)",
+                                            title = "Shorts Drama",
                                             onSeeAllClick = { viewModel.selectTab(BottomNavTab.SHORTS) }
                                         )
                                         Spacer(modifier = Modifier.height(6.dp))
@@ -334,12 +347,44 @@ fun PlayDramaFlixApp(
                                     }
                                 }
 
-                                // 7. Anime Series
+                                // 4. Drama Series
+                                if (dramaSeries.isNotEmpty()) {
+                                    item {
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        SectionHeader(
+                                            title = "Drama Series",
+                                            onSeeAllClick = { viewModel.selectTab(BottomNavTab.SEARCH) }
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        HorizontalDramaRow(
+                                            dramas = dramaSeries,
+                                            onDramaClick = { drama -> viewModel.openContentDetail(drama) }
+                                        )
+                                    }
+                                }
+
+                                // 5. Movies
+                                if (movies.isNotEmpty()) {
+                                    item {
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        SectionHeader(
+                                            title = "Movies",
+                                            onSeeAllClick = { viewModel.selectTab(BottomNavTab.SEARCH) }
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        HorizontalDramaRow(
+                                            dramas = movies,
+                                            onDramaClick = { drama -> viewModel.openContentDetail(drama) }
+                                        )
+                                    }
+                                }
+
+                                // 6. Anime Series
                                 if (animeSeries.isNotEmpty()) {
                                     item {
                                         Spacer(modifier = Modifier.height(16.dp))
                                         SectionHeader(
-                                            title = "Anime Series (Hindi Dub)",
+                                            title = "Anime Series",
                                             onSeeAllClick = { viewModel.selectTab(BottomNavTab.SEARCH) }
                                         )
                                         Spacer(modifier = Modifier.height(6.dp))
@@ -353,12 +398,25 @@ fun PlayDramaFlixApp(
                         }
 
                         BottomNavTab.SHORTS -> {
-                            // Vertical Shorts Reel View with the first shorts item
-                            val firstShorts = shortsDramas.firstOrNull() ?: allContents.firstOrNull()
+                            val shortsList = shortsDramas.ifEmpty { allContents }
+                            val firstShorts = shortsList.firstOrNull()
                             if (firstShorts != null) {
-                                LaunchedEffect(firstShorts.slug) {
-                                    viewModel.openContentDetail(firstShorts, playImmediately = true)
+                                val dummyEpisodes = remember(firstShorts.id) {
+                                    listOf(
+                                        EpisodeDto("ep_1", 1, "Episode 1", videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"),
+                                        EpisodeDto("ep_2", 2, "Episode 2", videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"),
+                                        EpisodeDto("ep_3", 3, "Episode 3", videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4")
+                                    )
                                 }
+                                ShortsReelsPlayer(
+                                    content = firstShorts,
+                                    episodes = dummyEpisodes,
+                                    onClose = { viewModel.selectTab(BottomNavTab.HOME) },
+                                    onToggleWatchlist = { viewModel.toggleWatchlistCurrentItem() },
+                                    isInWatchlist = isInWatchlist,
+                                    onProgressUpdate = { pos, dur -> viewModel.saveProgress(pos, dur) },
+                                    onEpisodeLocked = { viewModel.selectTab(BottomNavTab.VIP) }
+                                )
                             }
                         }
 

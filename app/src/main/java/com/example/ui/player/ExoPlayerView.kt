@@ -5,6 +5,7 @@ import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -57,6 +58,13 @@ fun ExoPlayerView(
     var isBuffering by remember { mutableStateOf(true) }
     var playbackSpeed by remember { mutableStateOf(1.0f) }
     var isFullscreen by remember { mutableStateOf(false) }
+
+    // When in landscape fullscreen, back button returns to portrait mode
+    BackHandler(enabled = isFullscreen) {
+        isFullscreen = false
+        val activity = context as? Activity
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+    }
 
     // ExoPlayer instance remembered
     val exoPlayer = remember(context) {
